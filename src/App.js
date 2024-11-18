@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
-//import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootswatch/dist/flatly/bootstrap.min.css'; // npm install bootswatch 
+// Import the desired Bootswatch theme
+import 'bootswatch/dist/flatly/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-
-function isNegative(number) {
-  return number < 0;
-}
 
 const FormComponent = () => {
   const [formData, setFormData] = useState({
     buyDate: '',
     buyPrice: '',
     sellDate: '',
-    sellPrice: ''
+    sellPrice: '',
+    calculateNoLossPrice: false
   });
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState(null);
@@ -23,103 +20,156 @@ const FormComponent = () => {
     setIsLoading(true);
 
     try {
-      // Extract and format dates
-      const buyDateFormatted = formData.buyDate.replace(/-/g, '');
-      const sellDateFormatted = formData.sellDate.replace(/-/g, '');
+      const { buyDate, buyPrice, sellDate, sellPrice, calculateNoLossPrice } = formData;
 
-      // Build API URLs
+      // Convert buy date to 'yyyymmdd' format
+      const buyDateFormatted = buyDate.replace(/-/g, '');
       const buyApiUrl = `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=USD&date=${buyDateFormatted}&json`;
-      const sellApiUrl = `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=USD&date=${sellDateFormatted}&json`;
+      const buyResponse = await fetch(buyApiUrl);
 
-      // Fetch exchange rates
-      const [buyResponse, sellResponse] = await Promise.all([
-        fetch(buyApiUrl),
-        fetch(sellApiUrl)
-      ]);
-
-      // Check responses
       if (!buyResponse.ok) {
         throw new Error(`Buy date API error: ${buyResponse.status} ${buyResponse.statusText}`);
       }
-      if (!sellResponse.ok) {
-        throw new Error(`Sell date API error: ${sellResponse.status} ${sellResponse.statusText}`);
-      }
 
-      // Parse JSON data
       const buyData = await buyResponse.json();
-      const sellData = await sellResponse.json();
 
-      // Check if data is available
       if (buyData.length === 0) {
         throw new Error('No exchange rate data available for the Buy Date.');
       }
-      if (sellData.length === 0) {
-        throw new Error('No exchange rate data available for the Sell Date.');
-      }
 
-      // Extract exchange rates
       const buyRate = buyData[0].rate;
-      const sellRate = sellData[0].rate;
-      const profitLoss =  formData.sellPrice - formData.buyPrice;
-      const buyPriceUAH = buyData[0].rate * formData.buyPrice;
-      const sellPriceUAH = sellData[0].rate * formData.sellPrice;
-      const profitLossUAH =  sellPriceUAH - buyPriceUAH;
 
-      // now we caclulate taxes
+      let sellRate;
+      let sellRateDate;
+
+      if (calculateNoLossPrice) {
+        // Fetch latest exchange rate
+        const sellApiUrl = `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=USD&json`;
+
+        const sellResponse = await fetch(sellApiUrl);
+
+        if (!sellResponse.ok) {
+          throw new Error(`Sell date API error: ${sellResponse.status} ${sellResponse.statusText}`);
+        }
+
+        const sellData = await sellResponse.json();
+
+        if (sellData.length === 0) {
+          throw new Error('No exchange rate data available for the Sell Date.');
+        }
+
+        sellRate = sellData[0].rate;
+        sellRateDate = sellData[0].exchangedate; // Date of the exchange rate
+      } else {
+        const sellDateFormatted = sellDate.replace(/-/g, '');
+
+        const sellApiUrl = `https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=USD&date=${sellDateFormatted}&json`;
+
+        const sellResponse = await fetch(sellApiUrl);
+
+        if (!sellResponse.ok) {
+          throw new Error(`Sell date API error: ${sellResponse.status} ${sellResponse.statusText}`);
+        }
+
+        const sellData = await sellResponse.json();
+
+        if (sellData.length === 0) {
+          throw new Error('No exchange rate data available for the Sell Date.');
+        }
+
+        sellRate = sellData[0].rate;
+        sellRateDate = sellDate;
+      }
+      const buyPriceNum = parseFloat(buyPrice);
+      const buyPriceUAH = buyRate * buyPriceNum;
+
+      // Tax rates
       const taxRateIncome = 0.18;
       const taxRateMilitary = 0.015;
       const taxRateComp = taxRateIncome + taxRateMilitary;
-      let taxUAH = 0;
-      let taxUAHIncome = 0;
-      let taxUAHMilitary = 0;
-      let profitLossAfterTax = profitLoss.toFixed(2);
 
-      if (isNegative(profitLossUAH)) {
-        console.log('Loss detected');
+      if (calculateNoLossPrice) {
+        // Calculate 'No Loss' Sell Price
+        /*
+        let's solve the equation to get formula for No Loss sell price
+        (x * sellRate) - ((x * SellRate - buyPrice * buyRate) * taxRate)) / sellRate = buyPrice
+        x * sellRate - ((x * SellRate - buyPrice * buyRate) * taxRate) = buyPrice * sellRate
+        x * sellRate - ((x * SellRate - buyPriceUAH) * taxRate) = buyPrice * sellRate
+        x * sellRate - (x * taxRate * SellRate - taxRate * buyPriceUAH) = buyPrice * sellRate
+
+        sellRateAfterTax = taxRate * SellRate
+        buyPriceUAHAfterTax = taxRate * buyPriceUAH
+
+        x * buyRate - (x * sellRateAfterTax - buyPriceUAHAfterTax) = buyPrice * sellRate
+        (x * (buyRate - sellRateAfterTax)) + buyPriceUAHAfterTax = buyPrice * sellRate
+        x * (buyRate - sellRateAfterTax) =  buyPrice * sellRate - buyPriceUAHAfterTax
+        x = (buyPrice * sellRate - buyPriceUAHAfterTax)/(sellRate - sellRateAfterTax)
+        */
+
+        const sellRateAfterTax = taxRateComp * sellRate;
+        const buyPriceUAHAfterTax = taxRateComp * buyPriceUAH;
+
+        const sellPriceNoLoss =
+          (buyPriceNum * sellRate - buyPriceUAHAfterTax) / (sellRate - sellRateAfterTax);
+
+        const resultData = {
+          buyDate: buyDate,
+          sellDate: sellRateDate,
+          buyRate: buyRate.toFixed(4),
+          sellRate: sellRate.toFixed(4),
+          buyPriceInUSD: buyPriceNum.toFixed(2),
+          sellPriceNoLoss: sellPriceNoLoss.toFixed(2)
+        };
+
+        setResults(resultData);
+        setIsExpanded(true);
       } else {
-        console.log('Profit detected');
-        taxUAHIncome = profitLossUAH * taxRateIncome;
-        taxUAHMilitary = profitLossUAH * taxRateMilitary;
-        taxUAH = taxUAHIncome + taxUAHMilitary;
-        const taxUSD = taxUAH / sellRate;
-        profitLossAfterTax = (formData.sellPrice - formData.buyPrice - taxUSD).toFixed(2);
+        // Convert sell price to number
+        const sellPriceNum = parseFloat(sellPrice);
+
+        // Calculate profit/loss
+        const profitLoss = sellPriceNum - buyPriceNum;
+
+        // Calculate prices in UAH
+        const sellPriceUAH = sellRate * sellPriceNum;
+        const profitLossUAH = sellPriceUAH - buyPriceUAH;
+
+        // Initialize tax variables
+        let taxUAH = 0;
+        let taxUAHIncome = 0;
+        let taxUAHMilitary = 0;
+        let profitLossAfterTax = profitLoss.toFixed(2);
+
+        if (profitLossUAH > 0) {
+          // Calculate taxes
+          taxUAHIncome = profitLossUAH * taxRateIncome;
+          taxUAHMilitary = profitLossUAH * taxRateMilitary;
+          taxUAH = taxUAHIncome + taxUAHMilitary;
+
+          // Convert tax to USD
+          const taxUSD = taxUAH / sellRate;
+
+          // Calculate profit after tax
+          profitLossAfterTax = (sellPriceNum - buyPriceNum - taxUSD).toFixed(2);
+        }
+
+        const resultData = {
+          buyDate: buyDate,
+          sellDate: sellDate,
+          buyRate: buyRate.toFixed(4),
+          sellRate: sellRate.toFixed(4),
+          buyPriceInUSD: buyPriceNum.toFixed(2),
+          sellPriceInUSD: sellPriceNum.toFixed(2),
+          profitLoss: profitLoss.toFixed(2),
+          taxUAH: taxUAH.toFixed(2),
+          taxUAHIncome: taxUAHIncome.toFixed(2),
+          taxUAHMilitary: taxUAHMilitary.toFixed(2),
+          profitLossAfterTax: profitLossAfterTax
+        };
+
+        setResults(resultData);
+        setIsExpanded(true);
       }
-      /*
-      let's solve the equation to get formula for No Loss sell price
-      (x * sellRate) - ((x * SellRate - buyPrice * buyRate) * taxRate)) / sellRate = buyPrice
-      x * sellRate - ((x * SellRate - buyPrice * buyRate) * taxRate) = buyPrice * sellRate
-      x * sellRate - ((x * SellRate - buyPriceUAH) * taxRate) = buyPrice * sellRate
-      x * sellRate - (x * taxRate * SellRate - taxRate * buyPriceUAH) = buyPrice * sellRate
-
-      sellRateAfterTax = taxRate * SellRate
-      buyPriceUAHAfterTax = taxRate * buyPriceUAH
-
-      x * buyRate - (x * sellRateAfterTax - buyPriceUAHAfterTax) = buyPrice * sellRate
-      (x * (buyRate - sellRateAfterTax)) + buyPriceUAHAfterTax = buyPrice * sellRate
-      x * (buyRate - sellRateAfterTax) =  buyPrice * sellRate - buyPriceUAHAfterTax
-      x = (buyPrice * sellRate - buyPriceUAHAfterTax)/(sellRate - sellRateAfterTax)
-      */
-      const sellRateAfterTax = taxRateComp * sellRate
-      const buyPriceUAHAfterTax = taxRateComp * buyPriceUAH
-      const sellPriceNoLoss = (formData.buyPrice * sellRate - buyPriceUAHAfterTax) / (sellRate - sellRateAfterTax)
-      console.log(sellPriceNoLoss)
-
-      const resultData = {
-        buyDate: formData.buyDate,
-        sellDate: formData.sellDate,
-        buyRate,
-        sellRate,
-        buyPriceInUSD: formData.buyPrice,
-        sellPriceInUSD: formData.sellPrice,
-        profitLoss: profitLoss.toFixed(2),
-        taxUAH: taxUAH.toFixed(2),
-        taxUAHIncome: taxUAHIncome.toFixed(2),
-        taxUAHMilitary: taxUAHMilitary.toFixed(2),
-        profitLossAfterTax: profitLossAfterTax
-      };
-
-      setResults(resultData);
-      setIsExpanded(true);
     } catch (error) {
       console.error('Error:', error);
       alert(`An error occurred: ${error.message}`);
@@ -131,19 +181,22 @@ const FormComponent = () => {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
 
-    // Ensure only numeric input for prices
-    if ((name === 'buyPrice' || name === 'sellPrice') && value !== '') {
+    let newValue = value;
+
+    if (type === 'checkbox') {
+      newValue = checked;
+    } else if ((name === 'buyPrice' || name === 'sellPrice') && value !== '') {
       const regex = /^\d*\.?\d*$/;
       if (!regex.test(value)) {
         return;
       }
     }
 
-    setFormData(prevState => ({
+    setFormData((prevState) => ({
       ...prevState,
-      [name]: value
+      [name]: newValue
     }));
   };
 
@@ -169,7 +222,7 @@ const FormComponent = () => {
                       value={formData.buyDate}
                       onChange={handleChange}
                       required
-                      max={formData.sellDate || new Date().toISOString().split('T')[0]}
+                      max={new Date().toISOString().split('T')[0]}
                       style={{ borderRadius: '8px', fontSize: '1rem', padding: '0.75rem' }}
                     />
                   </div>
@@ -189,38 +242,55 @@ const FormComponent = () => {
                   </div>
                 </div>
 
-                {/* Sell Date and Price */}
-                <div className="row mb-4">
-                  <div className="col-md-6">
-                    <label htmlFor="sellDate" className="form-label fw-semibold">Sell Date</label>
-                    <input
-                      type="date"
-                      className="form-control form-control-lg border-2"
-                      id="sellDate"
-                      name="sellDate"
-                      value={formData.sellDate}
-                      onChange={handleChange}
-                      required
-                      min={formData.buyDate}
-                      max={new Date().toISOString().split('T')[0]}
-                      style={{ borderRadius: '8px', fontSize: '1rem', padding: '0.75rem' }}
-                    />
-                  </div>
-                  <div className="col-md-6">
-                    <label htmlFor="sellPrice" className="form-label fw-semibold">Sell Price (in USD)</label>
-                    <input
-                      type="text"
-                      className="form-control form-control-lg border-2"
-                      id="sellPrice"
-                      name="sellPrice"
-                      value={formData.sellPrice}
-                      onChange={handleChange}
-                      placeholder="Enter sell price in USD"
-                      required
-                      style={{ borderRadius: '8px', fontSize: '1rem', padding: '0.75rem' }}
-                    />
-                  </div>
+                {/* Checkbox for No Loss Calculation */}
+                <div className="form-check mb-4">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="calculateNoLossPrice"
+                    name="calculateNoLossPrice"
+                    checked={formData.calculateNoLossPrice}
+                    onChange={handleChange}
+                  />
+                  <label className="form-check-label" htmlFor="calculateNoLossPrice">
+                    Calculate No Loss Price
+                  </label>
                 </div>
+
+                {/* Sell Date and Price */}
+                {!formData.calculateNoLossPrice && (
+                  <div className="row mb-4">
+                    <div className="col-md-6">
+                      <label htmlFor="sellDate" className="form-label fw-semibold">Sell Date</label>
+                      <input
+                        type="date"
+                        className="form-control form-control-lg border-2"
+                        id="sellDate"
+                        name="sellDate"
+                        value={formData.sellDate}
+                        onChange={handleChange}
+                        required
+                        min={formData.buyDate}
+                        max={new Date().toISOString().split('T')[0]}
+                        style={{ borderRadius: '8px', fontSize: '1rem', padding: '0.75rem' }}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label htmlFor="sellPrice" className="form-label fw-semibold">Sell Price (in USD)</label>
+                      <input
+                        type="text"
+                        className="form-control form-control-lg border-2"
+                        id="sellPrice"
+                        name="sellPrice"
+                        value={formData.sellPrice}
+                        onChange={handleChange}
+                        placeholder="Enter sell price in USD"
+                        required
+                        style={{ borderRadius: '8px', fontSize: '1rem', padding: '0.75rem' }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="d-grid gap-2 mt-4">
                   <button
@@ -263,38 +333,71 @@ const FormComponent = () => {
                   <div className="table-responsive">
                     <table className="table table-borderless mb-0">
                       <tbody>
-                        <tr>
-                          <th scope="row" className="ps-0">Total tax in UAH(18% + 1,5%):</th>
-                          <td className="pe-0">{results.taxUAH} UAH</td>
-                        </tr>
-                        <tr>
-                          <th scope="row" className="ps-0">Income Tax:</th>
-                          <td className="pe-0">{results.taxUAHIncome} UAH</td>
-                        </tr>
-                        <tr>
-                          <th scope="row" className="ps-0">Military Tax:</th>
-                          <td className="pe-0">{results.taxUAHMilitary} UAH</td>
-                        </tr>
-                        <tr>
-                          <th scope="row" className="ps-0">Income after taxes (USD):</th>
-                          <td className="pe-0">{results.profitLossAfterTax} USD</td>
-                        </tr>
+                        {formData.calculateNoLossPrice ? (
+                          <>
+                            <tr>
+                              <th scope="row" className="ps-0">Buy Date:</th>
+                              <td className="pe-0">{results.buyDate}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row" className="ps-0">Buy Exchange Rate (UAH/USD):</th>
+                              <td className="pe-0">{results.buyRate}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row" className="ps-0">Buy Price in USD:</th>
+                              <td className="pe-0">{results.buyPriceInUSD}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row" className="ps-0">Sell Date (Rate Used):</th>
+                              <td className="pe-0">{results.sellDate}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row" className="ps-0">Sell Exchange Rate (UAH/USD):</th>
+                              <td className="pe-0">{results.sellRate}</td>
+                            </tr>
+                            <tr>
+                              <th scope="row" className="ps-0">No Loss Sell Price (USD):</th>
+                              <td className="pe-0">{results.sellPriceNoLoss}</td>
+                            </tr>
+                          </>
+                        ) : (
+                          <>
+                            <tr>
+                              <th scope="row" className="ps-0">Total tax in UAH (18% + 1.5%):</th>
+                              <td className="pe-0">{results.taxUAH} UAH</td>
+                            </tr>
+                            <tr>
+                              <th scope="row" className="ps-0">Income Tax:</th>
+                              <td className="pe-0">{results.taxUAHIncome} UAH</td>
+                            </tr>
+                            <tr>
+                              <th scope="row" className="ps-0">Military Tax:</th>
+                              <td className="pe-0">{results.taxUAHMilitary} UAH</td>
+                            </tr>
+                            <tr>
+                              <th scope="row" className="ps-0">Income after taxes (USD):</th>
+                              <td className="pe-0">{results.profitLossAfterTax} USD</td>
+                            </tr>
+                          </>
+                        )}
                       </tbody>
                     </table>
                   </div>
                   {/* Optionally, display a message based on profit or loss */}
-                  {parseFloat(results.profitLossAfterTax) > 0 ? (
-                    <div className="alert alert-success mt-4" role="alert">
-                      You made a profit of ${results.profitLossAfterTax} USD.
-                    </div>
-                  ) : parseFloat(results.profitLossAfterTax) < 0 ? (
-                    <div className="alert alert-danger mt-4" role="alert">
-                      You incurred a loss of ${Math.abs(results.profitLossAfterTax)} USD.
-                    </div>
-                  ) : (
-                    <div className="alert alert-info mt-4" role="alert">
-                      You broke even.
-                    </div>
+                  {!formData.calculateNoLossPrice && (
+                    parseFloat(results.profitLossAfterTax) > 0 ? (
+                      <div className="alert alert-success mt-4" role="alert">
+                        You made a profit of ${results.profitLossAfterTax} USD.
+                      </div>
+                    ) : parseFloat(results.profitLossAfterTax) < 0 ? (
+                      <div className="alert alert-danger mt-4" role="alert">
+                        You incurred a loss of ${Math.abs(results.profitLossAfterTax)} USD.
+                      </div>
+                    ) : (
+                      <div className="alert alert-info mt-4" role="alert">
+                        You broke even.
+                      </div>
+                    )
                   )}
                 </div>
               </div>
