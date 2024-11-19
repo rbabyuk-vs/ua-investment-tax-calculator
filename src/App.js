@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 // Import the desired Bootswatch theme
-import 'bootswatch/dist/flatly/bootstrap.min.css';
+import 'bootswatch/dist/flatly/bootstrap.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 const FormComponent = () => {
