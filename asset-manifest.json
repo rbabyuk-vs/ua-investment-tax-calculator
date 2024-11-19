@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/ua-investment-tax-calculator/static/css/main.82585153.css",
+    "main.js": "/ua-investment-tax-calculator/static/js/main.a3bb7188.js",
+    "static/js/453.1be0d62b.chunk.js": "/ua-investment-tax-calculator/static/js/453.1be0d62b.chunk.js",
+    "index.html": "/ua-investment-tax-calculator/index.html",
+    "main.82585153.css.map": "/ua-investment-tax-calculator/static/css/main.82585153.css.map",
+    "main.a3bb7188.js.map": "/ua-investment-tax-calculator/static/js/main.a3bb7188.js.map",
+    "453.1be0d62b.chunk.js.map": "/ua-investment-tax-calculator/static/js/453.1be0d62b.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.82585153.css",
+    "static/js/main.a3bb7188.js"
+  ]
+}
