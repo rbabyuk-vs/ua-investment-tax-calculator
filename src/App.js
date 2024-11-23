@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
-// Import the desired Bootswatch theme
-import 'bootswatch/dist/flatly/bootstrap.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import {
+  Line,
+  Bar,
+  Doughnut,
+  Pie,
+  Radar,
+  PolarArea,
+  Bubble,
+  Scatter,
+} from 'react-chartjs-2';
+import 'chart.js/auto'; // Required for Chart.js v3
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootswatch/dist/flatly/bootstrap.min.css';
 
 const FormComponent = () => {
   const [formData, setFormData] = useState({
@@ -9,11 +19,10 @@ const FormComponent = () => {
     buyPrice: '',
     sellDate: '',
     sellPrice: '',
-    calculateNoLossPrice: false
+    calculateNoLossPrice: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,22 +99,6 @@ const FormComponent = () => {
 
       if (calculateNoLossPrice) {
         // Calculate 'No Loss' Sell Price
-        /*
-        let's solve the equation to get formula for No Loss sell price
-        (x * sellRate) - ((x * SellRate - buyPrice * buyRate) * taxRate)) / sellRate = buyPrice
-        x * sellRate - ((x * SellRate - buyPrice * buyRate) * taxRate) = buyPrice * sellRate
-        x * sellRate - ((x * SellRate - buyPriceUAH) * taxRate) = buyPrice * sellRate
-        x * sellRate - (x * taxRate * SellRate - taxRate * buyPriceUAH) = buyPrice * sellRate
-
-        sellRateAfterTax = taxRate * SellRate
-        buyPriceUAHAfterTax = taxRate * buyPriceUAH
-
-        x * buyRate - (x * sellRateAfterTax - buyPriceUAHAfterTax) = buyPrice * sellRate
-        (x * (buyRate - sellRateAfterTax)) + buyPriceUAHAfterTax = buyPrice * sellRate
-        x * (buyRate - sellRateAfterTax) =  buyPrice * sellRate - buyPriceUAHAfterTax
-        x = (buyPrice * sellRate - buyPriceUAHAfterTax)/(sellRate - sellRateAfterTax)
-        */
-
         const sellRateAfterTax = taxRateComp * sellRate;
         const buyPriceUAHAfterTax = taxRateComp * buyPriceUAH;
 
@@ -118,11 +111,10 @@ const FormComponent = () => {
           buyRate: buyRate.toFixed(4),
           sellRate: sellRate.toFixed(4),
           buyPriceInUSD: buyPriceNum.toFixed(2),
-          sellPriceNoLoss: sellPriceNoLoss.toFixed(2)
+          sellPriceNoLoss: sellPriceNoLoss.toFixed(2),
         };
 
         setResults(resultData);
-        setIsExpanded(true);
       } else {
         // Convert sell price to number
         const sellPriceNum = parseFloat(sellPrice);
@@ -164,17 +156,15 @@ const FormComponent = () => {
           taxUAH: taxUAH.toFixed(2),
           taxUAHIncome: taxUAHIncome.toFixed(2),
           taxUAHMilitary: taxUAHMilitary.toFixed(2),
-          profitLossAfterTax: profitLossAfterTax
+          profitLossAfterTax: profitLossAfterTax,
         };
 
         setResults(resultData);
-        setIsExpanded(true);
       }
     } catch (error) {
       console.error('Error:', error);
       alert(`An error occurred: ${error.message}`);
       setResults(null);
-      setIsExpanded(false);
     } finally {
       setIsLoading(false);
     }
@@ -196,24 +186,65 @@ const FormComponent = () => {
 
     setFormData((prevState) => ({
       ...prevState,
-      [name]: newValue
+      [name]: newValue,
     }));
+  };
+
+  // Function to generate chart data
+  const getChartData = () => {
+    if (!results) return null;
+
+    if (formData.calculateNoLossPrice) {
+      // Data for 'No Loss' calculation
+      return {
+        labels: ['Buy Price', 'No Loss Sell Price'],
+        datasets: [
+          {
+            label: 'Price in USD',
+            data: [parseFloat(results.buyPriceInUSD), parseFloat(results.sellPriceNoLoss)],
+            backgroundColor: ['#007bff', '#28a745'],
+          },
+        ],
+      };
+    } else {
+      // Data for regular calculation
+      return {
+        labels: ['Buy Price', 'Sell Price', 'Profit/Loss After Tax'],
+        datasets: [
+          {
+            label: 'Amount in USD',
+            data: [
+              parseFloat(results.buyPriceInUSD),
+              parseFloat(results.sellPriceInUSD),
+              parseFloat(results.profitLossAfterTax),
+            ],
+            backgroundColor: ['#007bff', '#28a745', '#ffc107'],
+          },
+        ],
+      };
+    }
   };
 
   return (
     <div className="container py-5">
+      {/* Form */}
       <div className="row justify-content-center">
         <div className="col-md-8">
+          {/* Form Card */}
           <div className="card shadow-sm border-0 mb-4">
             <div className="card-header bg-white border-0 pt-4 pb-3">
-              <h4 className="card-title text-center mb-0 fw-bold text-primary">Profit Loss Calculator</h4>
+              <h4 className="card-title text-center mb-0 fw-bold text-primary">
+                Profit Loss Calculator
+              </h4>
             </div>
             <div className="card-body px-4 py-4">
               <form onSubmit={handleSubmit}>
                 {/* Buy Date and Price */}
                 <div className="row mb-4">
                   <div className="col-md-6">
-                    <label htmlFor="buyDate" className="form-label fw-semibold">Buy Date</label>
+                    <label htmlFor="buyDate" className="form-label fw-semibold">
+                      Buy Date
+                    </label>
                     <input
                       type="date"
                       className="form-control form-control-lg border-2"
@@ -227,7 +258,9 @@ const FormComponent = () => {
                     />
                   </div>
                   <div className="col-md-6">
-                    <label htmlFor="buyPrice" className="form-label fw-semibold">Buy Price (in USD)</label>
+                    <label htmlFor="buyPrice" className="form-label fw-semibold">
+                      Buy Price (in USD)
+                    </label>
                     <input
                       type="text"
                       className="form-control form-control-lg border-2"
@@ -261,7 +294,9 @@ const FormComponent = () => {
                 {!formData.calculateNoLossPrice && (
                   <div className="row mb-4">
                     <div className="col-md-6">
-                      <label htmlFor="sellDate" className="form-label fw-semibold">Sell Date</label>
+                      <label htmlFor="sellDate" className="form-label fw-semibold">
+                        Sell Date
+                      </label>
                       <input
                         type="date"
                         className="form-control form-control-lg border-2"
@@ -276,7 +311,9 @@ const FormComponent = () => {
                       />
                     </div>
                     <div className="col-md-6">
-                      <label htmlFor="sellPrice" className="form-label fw-semibold">Sell Price (in USD)</label>
+                      <label htmlFor="sellPrice" className="form-label fw-semibold">
+                        Sell Price (in USD)
+                      </label>
                       <input
                         type="text"
                         className="form-control form-control-lg border-2"
@@ -301,106 +338,94 @@ const FormComponent = () => {
                       borderRadius: '8px',
                       padding: '0.75rem',
                       fontSize: '1rem',
-                      fontWeight: '500'
+                      fontWeight: '500',
                     }}
                   >
                     {isLoading ? (
                       <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                          aria-hidden="true"
+                        ></span>
                         Processing...
                       </>
-                    ) : 'Calculate'}
+                    ) : (
+                      'Calculate'
+                    )}
                   </button>
                 </div>
               </form>
             </div>
           </div>
 
-          {/* Collapsible Results */}
+          {/* Results Display with Charts */}
           {results && (
-            <div className={`collapse ${isExpanded ? 'show' : ''}`}>
-              <div className="card shadow-sm border-0">
-                <div className="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                  <h5 className="card-title mb-0 fw-bold text-success">Results</h5>
-                  <button
-                    className="btn btn-link p-0 text-decoration-none"
-                    onClick={() => setIsExpanded(!isExpanded)}
-                  >
-                    {isExpanded ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-                <div className="card-body px-4 py-4">
-                  <div className="table-responsive">
-                    <table className="table table-borderless mb-0">
-                      <tbody>
-                        {formData.calculateNoLossPrice ? (
-                          <>
-                            <tr>
-                              <th scope="row" className="ps-0">Buy Date:</th>
-                              <td className="pe-0">{results.buyDate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Buy Exchange Rate (UAH/USD):</th>
-                              <td className="pe-0">{results.buyRate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Buy Price in USD:</th>
-                              <td className="pe-0">{results.buyPriceInUSD}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Sell Date (Rate Used):</th>
-                              <td className="pe-0">{results.sellDate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Sell Exchange Rate (UAH/USD):</th>
-                              <td className="pe-0">{results.sellRate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">No Loss Sell Price (USD):</th>
-                              <td className="pe-0">{results.sellPriceNoLoss}</td>
-                            </tr>
-                          </>
-                        ) : (
-                          <>
-                            <tr>
-                              <th scope="row" className="ps-0">Total tax in UAH (18% + 1.5%):</th>
-                              <td className="pe-0">{results.taxUAH} UAH</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Income Tax:</th>
-                              <td className="pe-0">{results.taxUAHIncome} UAH</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Military Tax:</th>
-                              <td className="pe-0">{results.taxUAHMilitary} UAH</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Income after taxes (USD):</th>
-                              <td className="pe-0">{results.profitLossAfterTax} USD</td>
-                            </tr>
-                          </>
-                        )}
-                      </tbody>
-                    </table>
+            <div className="mt-5">
+              <h5 className="fw-bold text-success mb-4">Results</h5>
+              {formData.calculateNoLossPrice ? (
+                <>
+                  {/* Display Chart for 'No Loss' Calculation */}
+                  <div className="card mb-4">
+                    <div className="card-body">
+                      <h6 className="card-title">No Loss Sell Price Comparison</h6>
+                      <Bar
+                        data={getChartData()}
+                        options={{
+                          plugins: {
+                            legend: { display: false },
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                            },
+                          },
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {/* Display numerical results */}
+                  <p>
+                    <strong>No Loss Sell Price (USD):</strong> {results.sellPriceNoLoss}
+                  </p>
+                </>
+              ) : (
+                <>
+                  {/* Display Chart for Regular Calculation */}
+                  <div className="card mb-4">
+                    <div className="card-body">
+                      <h6 className="card-title">Price and Profit Visualization</h6>
+                      <Bar
+                        data={getChartData()}
+                        options={{
+                          plugins: {
+                            legend: { display: false },
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                            },
+                          },
+                        }}
+                      />
+                    </div>
                   </div>
                   {/* Optionally, display a message based on profit or loss */}
-                  {!formData.calculateNoLossPrice && (
-                    parseFloat(results.profitLossAfterTax) > 0 ? (
-                      <div className="alert alert-success mt-4" role="alert">
-                        You made a profit of ${results.profitLossAfterTax} USD.
-                      </div>
-                    ) : parseFloat(results.profitLossAfterTax) < 0 ? (
-                      <div className="alert alert-danger mt-4" role="alert">
-                        You incurred a loss of ${Math.abs(results.profitLossAfterTax)} USD.
-                      </div>
-                    ) : (
-                      <div className="alert alert-info mt-4" role="alert">
-                        You broke even.
-                      </div>
-                    )
+                  {parseFloat(results.profitLossAfterTax) > 0 ? (
+                    <div className="alert alert-success mt-4" role="alert">
+                      You made a profit of ${results.profitLossAfterTax} USD after taxes.
+                    </div>
+                  ) : parseFloat(results.profitLossAfterTax) < 0 ? (
+                    <div className="alert alert-danger mt-4" role="alert">
+                      You incurred a loss of ${Math.abs(results.profitLossAfterTax)} USD after taxes.
+                    </div>
+                  ) : (
+                    <div className="alert alert-info mt-4" role="alert">
+                      You broke even after taxes.
+                    </div>
                   )}
-                </div>
-              </div>
+                </>
+              )}
             </div>
           )}
         </div>
