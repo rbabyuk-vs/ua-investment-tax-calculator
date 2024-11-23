@@ -90,22 +90,6 @@ const FormComponent = () => {
 
       if (calculateNoLossPrice) {
         // Calculate 'No Loss' Sell Price
-        /*
-        let's solve the equation to get formula for No Loss sell price
-        (x * sellRate) - ((x * SellRate - buyPrice * buyRate) * taxRate)) / sellRate = buyPrice
-        x * sellRate - ((x * SellRate - buyPrice * buyRate) * taxRate) = buyPrice * sellRate
-        x * sellRate - ((x * SellRate - buyPriceUAH) * taxRate) = buyPrice * sellRate
-        x * sellRate - (x * taxRate * SellRate - taxRate * buyPriceUAH) = buyPrice * sellRate
-
-        sellRateAfterTax = taxRate * SellRate
-        buyPriceUAHAfterTax = taxRate * buyPriceUAH
-
-        x * buyRate - (x * sellRateAfterTax - buyPriceUAHAfterTax) = buyPrice * sellRate
-        (x * (buyRate - sellRateAfterTax)) + buyPriceUAHAfterTax = buyPrice * sellRate
-        x * (buyRate - sellRateAfterTax) =  buyPrice * sellRate - buyPriceUAHAfterTax
-        x = (buyPrice * sellRate - buyPriceUAHAfterTax)/(sellRate - sellRateAfterTax)
-        */
-
         const sellRateAfterTax = taxRateComp * sellRate;
         const buyPriceUAHAfterTax = taxRateComp * buyPriceUAH;
 
@@ -330,74 +314,113 @@ const FormComponent = () => {
                   </button>
                 </div>
                 <div className="card-body px-4 py-4">
-                  <div className="table-responsive">
-                    <table className="table table-borderless mb-0">
-                      <tbody>
-                        {formData.calculateNoLossPrice ? (
-                          <>
-                            <tr>
-                              <th scope="row" className="ps-0">Buy Date:</th>
-                              <td className="pe-0">{results.buyDate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Buy Exchange Rate (UAH/USD):</th>
-                              <td className="pe-0">{results.buyRate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Buy Price in USD:</th>
-                              <td className="pe-0">{results.buyPriceInUSD}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Sell Date (Rate Used):</th>
-                              <td className="pe-0">{results.sellDate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Sell Exchange Rate (UAH/USD):</th>
-                              <td className="pe-0">{results.sellRate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">No Loss Sell Price (USD):</th>
-                              <td className="pe-0">{results.sellPriceNoLoss}</td>
-                            </tr>
-                          </>
-                        ) : (
-                          <>
-                            <tr>
-                              <th scope="row" className="ps-0">Total tax in UAH (18% + 1.5%):</th>
-                              <td className="pe-0">{results.taxUAH} UAH</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Income Tax:</th>
-                              <td className="pe-0">{results.taxUAHIncome} UAH</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Military Tax:</th>
-                              <td className="pe-0">{results.taxUAHMilitary} UAH</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Income after taxes (USD):</th>
-                              <td className="pe-0">{results.profitLossAfterTax} USD</td>
-                            </tr>
-                          </>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                  {/* Optionally, display a message based on profit or loss */}
-                  {!formData.calculateNoLossPrice && (
-                    parseFloat(results.profitLossAfterTax) > 0 ? (
-                      <div className="alert alert-success mt-4" role="alert">
-                        You made a profit of ${results.profitLossAfterTax} USD.
+                  {formData.calculateNoLossPrice ? (
+                    <>
+                      {/* Display results using cards for 'No Loss' calculation */}
+                      <div className="row">
+                        <div className="col-md-6 mb-3">
+                          <div className="card border-primary h-100">
+                            <div className="card-body">
+                              <h5 className="card-title">Buy Date</h5>
+                              <p className="card-text">{results.buyDate}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <div className="card border-primary h-100">
+                            <div className="card-body">
+                              <h5 className="card-title">Buy Exchange Rate (UAH/USD)</h5>
+                              <p className="card-text">{results.buyRate}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <div className="card border-primary h-100">
+                            <div className="card-body">
+                              <h5 className="card-title">Buy Price in USD</h5>
+                              <p className="card-text">{results.buyPriceInUSD}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <div className="card border-primary h-100">
+                            <div className="card-body">
+                              <h5 className="card-title">Sell Date (Rate Used)</h5>
+                              <p className="card-text">{results.sellDate}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <div className="card border-primary h-100">
+                            <div className="card-body">
+                              <h5 className="card-title">Sell Exchange Rate (UAH/USD)</h5>
+                              <p className="card-text">{results.sellRate}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <div className="card border-success h-100">
+                            <div className="card-body">
+                              <h5 className="card-title">No Loss Sell Price (USD)</h5>
+                              <p className="card-text">{results.sellPriceNoLoss}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    ) : parseFloat(results.profitLossAfterTax) < 0 ? (
-                      <div className="alert alert-danger mt-4" role="alert">
-                        You incurred a loss of ${Math.abs(results.profitLossAfterTax)} USD.
+                    </>
+                  ) : (
+                    <>
+                      {/* Display results using cards for regular calculation */}
+                      <div className="row">
+                        <div className="col-md-6 mb-3">
+                          <div className="card border-primary h-100">
+                            <div className="card-body">
+                              <h5 className="card-title">Total Tax in UAH (18% + 1.5%)</h5>
+                              <p className="card-text">{results.taxUAH} UAH</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <div className="card border-warning h-100">
+                            <div className="card-body">
+                              <h5 className="card-title">Income Tax</h5>
+                              <p className="card-text">{results.taxUAHIncome} UAH</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <div className="card border-warning h-100">
+                            <div className="card-body">
+                              <h5 className="card-title">Military Tax</h5>
+                              <p className="card-text">{results.taxUAHMilitary} UAH</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-md-6 mb-3">
+                          <div className="card border-success h-100">
+                            <div className="card-body">
+                              <h5 className="card-title">Income After Taxes (USD)</h5>
+                              <p className="card-text">{results.profitLossAfterTax} USD</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="alert alert-info mt-4" role="alert">
-                        You broke even.
-                      </div>
-                    )
+
+                      {/* Optionally, display a message based on profit or loss */}
+                      {parseFloat(results.profitLossAfterTax) > 0 ? (
+                        <div className="alert alert-success mt-4" role="alert">
+                          You made a profit of ${results.profitLossAfterTax} USD.
+                        </div>
+                      ) : parseFloat(results.profitLossAfterTax) < 0 ? (
+                        <div className="alert alert-danger mt-4" role="alert">
+                          You incurred a loss of ${Math.abs(results.profitLossAfterTax)} USD.
+                        </div>
+                      ) : (
+                        <div className="alert alert-info mt-4" role="alert">
+                          You broke even.
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
