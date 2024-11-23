@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-// Import the desired Bootswatch theme
-import 'bootswatch/dist/flatly/bootstrap.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import { Toast, ToastContainer } from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootswatch/dist/flatly/bootstrap.min.css';
 
 const FormComponent = () => {
   const [formData, setFormData] = useState({
@@ -13,7 +13,7 @@ const FormComponent = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [showToast, setShowToast] = useState(false); // State for controlling the toast visibility
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,22 +90,6 @@ const FormComponent = () => {
 
       if (calculateNoLossPrice) {
         // Calculate 'No Loss' Sell Price
-        /*
-        let's solve the equation to get formula for No Loss sell price
-        (x * sellRate) - ((x * SellRate - buyPrice * buyRate) * taxRate)) / sellRate = buyPrice
-        x * sellRate - ((x * SellRate - buyPrice * buyRate) * taxRate) = buyPrice * sellRate
-        x * sellRate - ((x * SellRate - buyPriceUAH) * taxRate) = buyPrice * sellRate
-        x * sellRate - (x * taxRate * SellRate - taxRate * buyPriceUAH) = buyPrice * sellRate
-
-        sellRateAfterTax = taxRate * SellRate
-        buyPriceUAHAfterTax = taxRate * buyPriceUAH
-
-        x * buyRate - (x * sellRateAfterTax - buyPriceUAHAfterTax) = buyPrice * sellRate
-        (x * (buyRate - sellRateAfterTax)) + buyPriceUAHAfterTax = buyPrice * sellRate
-        x * (buyRate - sellRateAfterTax) =  buyPrice * sellRate - buyPriceUAHAfterTax
-        x = (buyPrice * sellRate - buyPriceUAHAfterTax)/(sellRate - sellRateAfterTax)
-        */
-
         const sellRateAfterTax = taxRateComp * sellRate;
         const buyPriceUAHAfterTax = taxRateComp * buyPriceUAH;
 
@@ -122,7 +106,7 @@ const FormComponent = () => {
         };
 
         setResults(resultData);
-        setIsExpanded(true);
+        setShowToast(true); // Show the toast with results
       } else {
         // Convert sell price to number
         const sellPriceNum = parseFloat(sellPrice);
@@ -168,13 +152,12 @@ const FormComponent = () => {
         };
 
         setResults(resultData);
-        setIsExpanded(true);
+        setShowToast(true); // Show the toast with results
       }
     } catch (error) {
       console.error('Error:', error);
       alert(`An error occurred: ${error.message}`);
       setResults(null);
-      setIsExpanded(false);
     } finally {
       setIsLoading(false);
     }
@@ -200,10 +183,16 @@ const FormComponent = () => {
     }));
   };
 
+  const handleCloseToast = () => {
+    setShowToast(false);
+  };
+
   return (
     <div className="container py-5">
+      {/* Form */}
       <div className="row justify-content-center">
         <div className="col-md-8">
+          {/* Form Card */}
           <div className="card shadow-sm border-0 mb-4">
             <div className="card-header bg-white border-0 pt-4 pb-3">
               <h4 className="card-title text-center mb-0 fw-bold text-primary">Profit Loss Calculator</h4>
@@ -315,96 +304,56 @@ const FormComponent = () => {
               </form>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Collapsible Results */}
-          {results && (
-            <div className={`collapse ${isExpanded ? 'show' : ''}`}>
-              <div className="card shadow-sm border-0">
-                <div className="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                  <h5 className="card-title mb-0 fw-bold text-success">Results</h5>
-                  <button
-                    className="btn btn-link p-0 text-decoration-none"
-                    onClick={() => setIsExpanded(!isExpanded)}
-                  >
-                    {isExpanded ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-                <div className="card-body px-4 py-4">
-                  <div className="table-responsive">
-                    <table className="table table-borderless mb-0">
-                      <tbody>
-                        {formData.calculateNoLossPrice ? (
-                          <>
-                            <tr>
-                              <th scope="row" className="ps-0">Buy Date:</th>
-                              <td className="pe-0">{results.buyDate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Buy Exchange Rate (UAH/USD):</th>
-                              <td className="pe-0">{results.buyRate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Buy Price in USD:</th>
-                              <td className="pe-0">{results.buyPriceInUSD}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Sell Date (Rate Used):</th>
-                              <td className="pe-0">{results.sellDate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Sell Exchange Rate (UAH/USD):</th>
-                              <td className="pe-0">{results.sellRate}</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">No Loss Sell Price (USD):</th>
-                              <td className="pe-0">{results.sellPriceNoLoss}</td>
-                            </tr>
-                          </>
-                        ) : (
-                          <>
-                            <tr>
-                              <th scope="row" className="ps-0">Total tax in UAH (18% + 1.5%):</th>
-                              <td className="pe-0">{results.taxUAH} UAH</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Income Tax:</th>
-                              <td className="pe-0">{results.taxUAHIncome} UAH</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Military Tax:</th>
-                              <td className="pe-0">{results.taxUAHMilitary} UAH</td>
-                            </tr>
-                            <tr>
-                              <th scope="row" className="ps-0">Income after taxes (USD):</th>
-                              <td className="pe-0">{results.profitLossAfterTax} USD</td>
-                            </tr>
-                          </>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                  {/* Optionally, display a message based on profit or loss */}
-                  {!formData.calculateNoLossPrice && (
-                    parseFloat(results.profitLossAfterTax) > 0 ? (
-                      <div className="alert alert-success mt-4" role="alert">
+      {/* Toast Notification for displaying results */}
+      <ToastContainer position="top-end" className="p-3">
+        <Toast show={showToast} onClose={handleCloseToast} delay={10000} autohide>
+          <Toast.Header>
+            <strong className="me-auto">Calculation Results</strong>
+          </Toast.Header>
+          <Toast.Body>
+            {results && (
+              <>
+                {formData.calculateNoLossPrice ? (
+                  <>
+                    <h6 className="text-primary">No Loss Sell Price</h6>
+                    <p><strong>Buy Date:</strong> {results.buyDate}</p>
+                    <p><strong>Buy Exchange Rate (UAH/USD):</strong> {results.buyRate}</p>
+                    <p><strong>Buy Price in USD:</strong> {results.buyPriceInUSD}</p>
+                    <p><strong>Sell Date (Rate Used):</strong> {results.sellDate}</p>
+                    <p><strong>Sell Exchange Rate (UAH/USD):</strong> {results.sellRate}</p>
+                    <p><strong>No Loss Sell Price (USD):</strong> {results.sellPriceNoLoss}</p>
+                  </>
+                ) : (
+                  <>
+                    <p><strong>Total Tax in UAH (18% + 1.5%):</strong> {results.taxUAH} UAH</p>
+                    <p><strong>Income Tax:</strong> {results.taxUAHIncome} UAH</p>
+                    <p><strong>Military Tax:</strong> {results.taxUAHMilitary} UAH</p>
+                    <p><strong>Income After Taxes (USD):</strong> {results.profitLossAfterTax} USD</p>
+
+                    {/* Optionally, display a message based on profit or loss */}
+                    {parseFloat(results.profitLossAfterTax) > 0 ? (
+                      <div className="alert alert-success mt-3 mb-0" role="alert">
                         You made a profit of ${results.profitLossAfterTax} USD.
                       </div>
                     ) : parseFloat(results.profitLossAfterTax) < 0 ? (
-                      <div className="alert alert-danger mt-4" role="alert">
+                      <div className="alert alert-danger mt-3 mb-0" role="alert">
                         You incurred a loss of ${Math.abs(results.profitLossAfterTax)} USD.
                       </div>
                     ) : (
-                      <div className="alert alert-info mt-4" role="alert">
+                      <div className="alert alert-info mt-3 mb-0" role="alert">
                         You broke even.
                       </div>
-                    )
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </Toast.Body>
+        </Toast>
+      </ToastContainer>
     </div>
   );
 };
