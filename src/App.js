@@ -9,7 +9,9 @@ const FormComponent = () => {
     buyPrice: '',
     sellDate: '',
     sellPrice: '',
-    calculateNoLossPrice: false
+    calculateNoLossPrice: false,
+    taxRateIncome: 18,
+    taxRateMilitary: 5
   });
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState(null);
@@ -84,9 +86,9 @@ const FormComponent = () => {
       const buyPriceUAH = buyRate * buyPriceNum;
 
       // Tax rates
-      const taxRateIncome = 0.18;
-      const taxRateMilitary = 0.015;
-      const taxRateComp = taxRateIncome + taxRateMilitary;
+      const taxRateIncome = formData.taxRateIncome / 100;
+      const taxRateMilitary = formData.taxRateMilitary / 100;
+      const taxRateComb = taxRateIncome + taxRateMilitary;
 
       if (calculateNoLossPrice) {
         // Calculate 'No Loss' Sell Price
@@ -106,8 +108,8 @@ const FormComponent = () => {
         x = (buyPrice * sellRate - buyPriceUAHAfterTax)/(sellRate - sellRateAfterTax)
         */
 
-        const sellRateAfterTax = taxRateComp * sellRate;
-        const buyPriceUAHAfterTax = taxRateComp * buyPriceUAH;
+        const sellRateAfterTax = taxRateComb * sellRate;
+        const buyPriceUAHAfterTax = taxRateComb * buyPriceUAH;
 
         const sellPriceNoLoss =
           (buyPriceNum * sellRate - buyPriceUAHAfterTax) / (sellRate - sellRateAfterTax);
@@ -120,8 +122,8 @@ const FormComponent = () => {
           buyPriceInUSD: buyPriceNum.toFixed(2),
           sellPriceNoLoss: sellPriceNoLoss.toFixed(2)
         };
-
         setResults(resultData);
+
         setIsExpanded(true);
       } else {
         // Convert sell price to number
@@ -164,7 +166,9 @@ const FormComponent = () => {
           taxUAH: taxUAH.toFixed(2),
           taxUAHIncome: taxUAHIncome.toFixed(2),
           taxUAHMilitary: taxUAHMilitary.toFixed(2),
-          profitLossAfterTax: profitLossAfterTax
+          profitLossAfterTax: profitLossAfterTax,
+          taxRateIncome: (taxRateIncome * 100).toFixed(2),
+          taxRateMilitary: (taxRateMilitary * 100).toFixed(2),
         };
 
         setResults(resultData);
@@ -207,6 +211,44 @@ const FormComponent = () => {
           <div className="card shadow-sm border-0 mb-4">
             <div className="card-header bg-white border-0 pt-4 pb-3">
               <h4 className="card-title text-center mb-0 fw-bold text-primary">Profit Loss Calculator</h4>
+            </div>
+            <div className="card-header bg-white border-0 pt-4 pb-3">
+              <form onSubmit={handleSubmit}>
+                <div className="row">
+                  {/* Tax Rate Income field */}
+                  <div className="col-md-6">
+                    <div className="form-group">
+                      <label htmlFor="taxRateIncome" className="form-label fw-semibold">Tax Rate Income (%)</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        id="taxRateIncome"
+                        name="taxRateIncome"
+                        value={formData.taxRateIncome}
+                        onChange={handleChange}
+                        step="0.01"
+                        style={{ width: '80px' }}
+                      />
+                    </div>
+                  </div>
+                  {/* Tax Rate Military field */}
+                  <div className="col-md-6">
+                    <div className="form-group">
+                      <label htmlFor="taxRateMilitary" className="form-label fw-semibold">Tax Rate Military (%)</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        id="taxRateMilitary"
+                        name="taxRateMilitary"
+                        value={formData.taxRateMilitary}
+                        onChange={handleChange}
+                        step="0.01"
+                        style={{ width: '80px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </form>
             </div>
             <div className="card-body px-4 py-4">
               <form onSubmit={handleSubmit}>
@@ -363,7 +405,7 @@ const FormComponent = () => {
                         ) : (
                           <>
                             <tr>
-                              <th scope="row" className="ps-0">Total tax in UAH (18% + 1.5%):</th>
+                              <th scope="row" className="ps-0">Total tax in UAH ({results.taxRateIncome}% + {results.taxRateMilitary}%):</th>
                               <td className="pe-0">{results.taxUAH} UAH</td>
                             </tr>
                             <tr>
