@@ -55,3 +55,9 @@ The application will open in your default browser at http://localhost:3000.
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](https://mit-license.org/) file for details.
+
+# deploy to GitHub Pages
+
+```bash
+npm run deploy
+```
